@@ -12,7 +12,7 @@
     <Version>0.1.0</Version>
     <Authors>devonic contributors</Authors>
     <Description>Open your projects fast from the terminal.</Description>
-    <PackageProjectUrl>https://github.com/devonic-cli/devonic</PackageProjectUrl>
+    <PackageProjectUrl>https://github.com/j-carv/devonic</PackageProjectUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
   </PropertyGroup>
 

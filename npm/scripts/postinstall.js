@@ -4,7 +4,7 @@ const path = require("path");
 const https = require("https");
 
 const VERSION = require("../package.json").version;
-const REPO = "devonic-cli/devonic";
+const REPO = "j-carv/devonic";
 
 const PLATFORM_MAP = {
   win32: { rid: "win-x64", archive: "zip", binary: "Devonic.CLI.exe" },
@@ -84,7 +84,7 @@ function download(url, dest) {
 install().catch((err) => {
   console.error("Failed to install devonic:", err.message);
   console.error("\nYou can install manually:");
-  console.error("  1. Download from https://github.com/devonic-cli/devonic/releases");
+  console.error("  1. Download from https://github.com/j-carv/devonic/releases");
   console.error("  2. Or install via .NET: dotnet tool install -g Devonic");
   process.exit(1);
 });

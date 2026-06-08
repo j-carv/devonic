@@ -24,12 +24,12 @@ dotnet tool install -g Devonic
 
 ### Standalone binary
 
-Download from [Releases](https://github.com/devonic-cli/devonic/releases) and add to your PATH.
+Download from [Releases](https://github.com/j-carv/devonic/releases) and add to your PATH.
 
 ### From source
 
 ```bash
-git clone https://github.com/devonic-cli/devonic.git
+git clone https://github.com/j-carv/devonic.git
 cd devonic
 dotnet build -c Release
 ```

@@ -5,9 +5,9 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/devonic-cli/devonic.git"
+    "url": "https://github.com/j-carv/devonic.git"
   },
-  "homepage": "https://github.com/devonic-cli/devonic",
+  "homepage": "https://github.com/j-carv/devonic",
   "keywords": [
     "cli",
     "project",

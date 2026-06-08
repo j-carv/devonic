@@ -44,7 +44,7 @@ dotnet tool uninstall -g Devonic
 
 ## Standalone binary
 
-Download the archive for your platform from [Releases](https://github.com/devonic-cli/devonic/releases):
+Download the archive for your platform from [Releases](https://github.com/j-carv/devonic/releases):
 
 - `devonic-win-x64.zip` — Windows
 - `devonic-linux-x64.tar.gz` — Linux
@@ -68,7 +68,7 @@ tar -xzf devonic-linux-x64.tar.gz -C ~/.local/bin/
 ## From source
 
 ```bash
-git clone https://github.com/devonic-cli/devonic.git
+git clone https://github.com/j-carv/devonic.git
 cd devonic
 dotnet build -c Release
 ```
