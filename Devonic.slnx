@@ -1,0 +1,7 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Devonic.CLI/Devonic.CLI.csproj" />
+    <Project Path="src/Devonic.Core/Devonic.Core.csproj" />
+    <Project Path="src/Devonic.Infrastructure/Devonic.Infrastructure.csproj" />
+  </Folder>
+</Solution>

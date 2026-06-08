@@ -1,0 +1,37 @@
+{
+  "name": "devonic",
+  "version": "0.1.0",
+  "description": "Open your projects fast from the terminal",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/devonic-cli/devonic.git"
+  },
+  "homepage": "https://github.com/devonic-cli/devonic",
+  "keywords": [
+    "cli",
+    "project",
+    "launcher",
+    "ide",
+    "developer-tools",
+    "productivity"
+  ],
+  "bin": {
+    "dev": "./bin/dev.js"
+  },
+  "scripts": {
+    "postinstall": "node scripts/postinstall.js"
+  },
+  "files": [
+    "bin/",
+    "scripts/"
+  ],
+  "os": [
+    "win32",
+    "linux",
+    "darwin"
+  ],
+  "engines": {
+    "node": ">=18"
+  }
+}

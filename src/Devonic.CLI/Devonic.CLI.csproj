@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>Devonic.CLI</RootNamespace>
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>dev</ToolCommandName>
+    <PackageId>Devonic</PackageId>
+    <Version>0.1.0</Version>
+    <Authors>devonic contributors</Authors>
+    <Description>Open your projects fast from the terminal.</Description>
+    <PackageProjectUrl>https://github.com/devonic-cli/devonic</PackageProjectUrl>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Devonic.Core\Devonic.Core.csproj" />
+    <ProjectReference Include="..\Devonic.Infrastructure\Devonic.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Spectre.Console" Version="0.56.0" />
+  </ItemGroup>
+
+</Project>
