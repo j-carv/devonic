@@ -20,6 +20,11 @@ async function install() {
   }
 
   const binDir = path.join(__dirname, "..", "bin");
+
+  if (!fs.existsSync(binDir)) {
+    fs.mkdirSync(binDir, { recursive: true });
+  }
+
   const binaryPath = path.join(binDir, platform.binary);
 
   if (fs.existsSync(binaryPath)) {
