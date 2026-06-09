@@ -73,7 +73,7 @@ static int ShowHelp()
 
 static int ShowVersion()
 {
-    AnsiConsole.MarkupLine("[bold]devonic[/] v0.1.1");
+    AnsiConsole.MarkupLine("[bold]devonic[/] v0.1.2");
     return 0;
 }
 
