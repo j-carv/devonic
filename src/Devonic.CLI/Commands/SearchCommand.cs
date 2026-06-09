@@ -17,7 +17,7 @@ internal static class SearchCommand
         AnsiConsole.WriteLine();
         var table = new Table()
             .Border(TableBorder.Rounded)
-            .Title($"[bold]{results.Count} match(es) for '{Markup.Escape(query)}'[/]")
+            .Title($"[bold]{results.Count} {(results.Count == 1 ? "match" : "matches")} for '{Markup.Escape(query)}'[/]")
             .AddColumn("[bold]Name[/]")
             .AddColumn("[bold]Alias[/]")
             .AddColumn("[bold]IDE[/]")

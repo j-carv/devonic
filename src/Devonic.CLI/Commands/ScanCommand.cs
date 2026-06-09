@@ -5,20 +5,20 @@ namespace Devonic.CLI.Commands;
 
 internal static class ScanCommand
 {
-    private static readonly Dictionary<string, string> ProjectIndicators = new()
+    private static readonly Dictionary<string, (string Label, string Tag)> ProjectIndicators = new()
     {
-        ["*.sln"] = ".NET Solution",
-        ["*.slnx"] = ".NET Solution",
-        ["*.csproj"] = ".NET Project",
-        ["package.json"] = "Node.js",
-        ["Cargo.toml"] = "Rust",
-        ["go.mod"] = "Go",
-        ["pom.xml"] = "Java (Maven)",
-        ["build.gradle"] = "Java (Gradle)",
-        ["pyproject.toml"] = "Python",
-        ["requirements.txt"] = "Python",
-        ["Gemfile"] = "Ruby",
-        ["composer.json"] = "PHP",
+        ["*.sln"] = (".NET Solution", "dotnet"),
+        ["*.slnx"] = (".NET Solution", "dotnet"),
+        ["*.csproj"] = (".NET Project", "dotnet"),
+        ["package.json"] = ("Node.js", "node"),
+        ["Cargo.toml"] = ("Rust", "rust"),
+        ["go.mod"] = ("Go", "go"),
+        ["pom.xml"] = ("Java (Maven)", "java"),
+        ["build.gradle"] = ("Java (Gradle)", "java"),
+        ["pyproject.toml"] = ("Python", "python"),
+        ["requirements.txt"] = ("Python", "python"),
+        ["Gemfile"] = ("Ruby", "ruby"),
+        ["composer.json"] = ("PHP", "php"),
     };
 
     public static async Task<int> RunAsync(ServiceLocator services, string? directory)
@@ -35,7 +35,7 @@ internal static class ScanCommand
 
         var existing = await services.ProjectRepository.GetAllAsync();
         var existingPaths = existing.Select(p => p.Path.TrimEnd('\\', '/')).ToHashSet(StringComparer.OrdinalIgnoreCase);
-        var found = new List<(string Path, string Type)>();
+        var found = new List<(string Path, string Label, string Tag)>();
 
         foreach (var dir in Directory.GetDirectories(scanPath))
         {
@@ -43,11 +43,11 @@ internal static class ScanCommand
             if (existingPaths.Contains(normalizedDir))
                 continue;
 
-            foreach (var (pattern, type) in ProjectIndicators)
+            foreach (var (pattern, (label, tag)) in ProjectIndicators)
             {
                 if (Directory.GetFiles(dir, pattern, SearchOption.TopDirectoryOnly).Length > 0)
                 {
-                    found.Add((dir, type));
+                    found.Add((dir, label, tag));
                     break;
                 }
             }
@@ -66,10 +66,10 @@ internal static class ScanCommand
             .AddColumn("[bold]Type[/]");
 
         for (var i = 0; i < found.Count; i++)
-            table.AddRow((i + 1).ToString(), Markup.Escape(Path.GetFileName(found[i].Path)), found[i].Type);
+            table.AddRow((i + 1).ToString(), Markup.Escape(Path.GetFileName(found[i].Path)), found[i].Label);
 
         AnsiConsole.Write(table);
-        AnsiConsole.MarkupLine($"\n  [dim]{found.Count} project(s) found[/]\n");
+        AnsiConsole.MarkupLine($"\n  [dim]{found.Count} {(found.Count == 1 ? "project" : "projects")} found[/]\n");
 
         var selected = AnsiConsole.Prompt(
             new MultiSelectionPrompt<string>()
@@ -94,7 +94,8 @@ internal static class ScanCommand
             {
                 Name = name.ToLowerInvariant(),
                 Path = match.Path,
-                Ide = ide
+                Ide = ide,
+                Tags = [match.Tag]
             };
 
             var result = await services.AddProject.ExecuteAsync(project);
@@ -109,7 +110,7 @@ internal static class ScanCommand
             }
         }
 
-        AnsiConsole.MarkupLine($"\n  [green]{registered} project(s) registered.[/]");
+        AnsiConsole.MarkupLine($"\n  [green]+[/] {registered} registered.");
         return 0;
     }
 }

@@ -4,7 +4,7 @@ namespace Devonic.CLI.Commands;
 
 internal static class ListCommand
 {
-    public static async Task<int> RunAsync(ServiceLocator services, string? tagFilter = null)
+    public static async Task<int> RunAsync(ServiceLocator services, string? tagFilter = null, string? sortBy = null)
     {
         var projects = tagFilter is not null
             ? await services.ProjectRepository.GetByTagAsync(tagFilter)
@@ -19,8 +19,25 @@ internal static class ListCommand
             return 0;
         }
 
-        var title = tagFilter is not null ? $"Projects tagged #{tagFilter}" : $"{projects.Count} project(s)";
+        var title = tagFilter is not null
+            ? $"#{tagFilter}"
+            : $"{projects.Count} {(projects.Count == 1 ? "project" : "projects")}";
         AnsiConsole.WriteLine();
+
+        var usages = sortBy is "opens" or "recent"
+            ? await services.UsageTracker.GetRecentAsync(100)
+            : null;
+
+        var sorted = sortBy switch
+        {
+            "opens" => projects
+                .OrderByDescending(p => usages!.FirstOrDefault(u => u.ProjectName.Equals(p.Name, StringComparison.OrdinalIgnoreCase))?.OpenCount ?? 0)
+                .ThenBy(p => p.Name),
+            "recent" => projects
+                .OrderByDescending(p => usages!.FirstOrDefault(u => u.ProjectName.Equals(p.Name, StringComparison.OrdinalIgnoreCase))?.LastOpened ?? DateTime.MinValue)
+                .ThenBy(p => p.Name),
+            _ => projects.OrderByDescending(p => p.IsFavorite).ThenBy(p => p.Name)
+        };
 
         var table = new Table()
             .Border(TableBorder.Rounded)
@@ -31,7 +48,7 @@ internal static class ListCommand
             .AddColumn("[bold]Path[/]")
             .AddColumn("[bold]Tags[/]");
 
-        foreach (var p in projects.OrderByDescending(p => p.IsFavorite).ThenBy(p => p.Name))
+        foreach (var p in sorted)
         {
             var star = p.IsFavorite ? "[yellow]*[/] " : "  ";
             var tagsCol = p.Tags.Count > 0

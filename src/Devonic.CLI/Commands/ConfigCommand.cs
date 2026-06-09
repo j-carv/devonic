@@ -14,6 +14,7 @@ internal static class ConfigCommand
         {
             "show" => await ShowAsync(services),
             "set" when args.Length >= 3 => await SetAsync(services, args[1], string.Join(" ", args[2..])),
+            "set" when args.Length == 2 => await SetInteractiveAsync(services, args[1]),
             "set" => ShowSetUsage(),
             _ => ShowUsage()
         };
@@ -91,6 +92,19 @@ internal static class ConfigCommand
         await services.ConfigRepository.SaveAsync(updated);
         AnsiConsole.MarkupLine($"\n  [green]>[/] [bold]{Markup.Escape(key)}[/] set to [cyan]{Markup.Escape(value)}[/]\n");
         return 0;
+    }
+
+    private static async Task<int> SetInteractiveAsync(ServiceLocator services, string key)
+    {
+        return key.ToLowerInvariant() switch
+        {
+            "defaultide" => await SetAsync(services, key, AnsiConsole.Prompt(
+                new SelectionPrompt<Ide>()
+                    .Title("  Select default [green]IDE[/]:")
+                    .AddChoices(Enum.GetValues<Ide>())
+                    .UseConverter(i => i.ToString())).ToString()),
+            _ => ShowSetUsage()
+        };
     }
 
     private static int ShowSetUsage()

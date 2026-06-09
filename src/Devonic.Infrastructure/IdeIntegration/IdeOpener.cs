@@ -10,23 +10,41 @@ public sealed class IdeOpener(IConfigRepository configRepository) : IIdeOpener
 {
     private static readonly Dictionary<Ide, string[]> WindowsCommands = new()
     {
+        [Ide.VsCode] = ["code.cmd", "code"],
         [Ide.Rider] = ["rider64.exe", "rider"],
         [Ide.IntelliJ] = ["idea64.exe", "idea"],
-        [Ide.VsCode] = ["code.cmd", "code"]
+        [Ide.WebStorm] = ["webstorm64.exe", "webstorm"],
+        [Ide.VisualStudio] = ["devenv.exe"],
+        [Ide.Cursor] = ["cursor.cmd", "cursor"],
+        [Ide.Zed] = ["zed.exe", "zed"],
+        [Ide.Fleet] = ["fleet.exe", "fleet"],
+        [Ide.Neovim] = ["nvim"]
     };
 
     private static readonly Dictionary<Ide, string[]> LinuxCommands = new()
     {
+        [Ide.VsCode] = ["code"],
         [Ide.Rider] = ["rider"],
         [Ide.IntelliJ] = ["idea"],
-        [Ide.VsCode] = ["code"]
+        [Ide.WebStorm] = ["webstorm"],
+        [Ide.VisualStudio] = [],
+        [Ide.Cursor] = ["cursor"],
+        [Ide.Zed] = ["zed"],
+        [Ide.Fleet] = ["fleet"],
+        [Ide.Neovim] = ["nvim"]
     };
 
     private static readonly Dictionary<Ide, string[]> MacCommands = new()
     {
+        [Ide.VsCode] = ["code", "open -a Visual\\ Studio\\ Code"],
         [Ide.Rider] = ["rider", "open -a Rider"],
         [Ide.IntelliJ] = ["idea", "open -a IntelliJ\\ IDEA"],
-        [Ide.VsCode] = ["code", "open -a Visual\\ Studio\\ Code"]
+        [Ide.WebStorm] = ["webstorm", "open -a WebStorm"],
+        [Ide.VisualStudio] = ["open -a Visual\\ Studio"],
+        [Ide.Cursor] = ["cursor", "open -a Cursor"],
+        [Ide.Zed] = ["zed", "open -a Zed"],
+        [Ide.Fleet] = ["fleet", "open -a Fleet"],
+        [Ide.Neovim] = ["nvim"]
     };
 
     public async Task<Result> OpenAsync(Project project)

@@ -24,8 +24,14 @@ return command switch
     "clone" => await CloneCommand.RunAsync(services, remaining.FirstOrDefault()),
     "config" => await ConfigCommand.RunAsync(services, remaining),
     "scan" => await ScanCommand.RunAsync(services, remaining.FirstOrDefault()),
-    "doctor" or "check" => await DoctorCommand.RunAsync(services),
+    "doctor" or "check" => await DoctorCommand.RunAsync(services, fix: remaining.Contains("--fix")),
     "stats" => await StatsCommand.RunAsync(services),
+    "cd" => await CdCommand.RunAsync(services, remaining.FirstOrDefault()),
+    "init" => await InitCommand.RunAsync(services),
+    "group" or "g" => await GroupCommand.RunAsync(services, remaining),
+    "notes" or "note" => await HandleNotesAsync(services, remaining),
+    "completions" => await CompletionsCommand.RunAsync(services, remaining.FirstOrDefault()),
+    "--last" => await OpenLastAsync(services),
     "--help" or "-h" or "help" => ShowHelp(),
     "--version" or "-v" => ShowVersion(),
     _ => await OpenProject(services, command, remaining)
@@ -46,8 +52,7 @@ static async Task<int> InteractiveSelectAsync(ServiceLocator services)
     {
         var display = p.IsFavorite ? $"[yellow]*[/] {p.Name}" : $"  {p.Name}";
         if (p.Alias is not null) display += $" [dim]({p.Alias})[/]";
-        if (p.Tags.Count > 0) display += $" [dim]{string.Join(" ", p.Tags.Select(t => $"#{t}"))}[/]";
-        display += $"  [dim]| {p.Ide}[/]";
+        display += $"  [dim]{p.Ide}[/]";
         lookup[display] = p.Name;
     }
 
@@ -64,12 +69,33 @@ static async Task<int> InteractiveSelectAsync(ServiceLocator services)
 static async Task<int> HandleListAsync(ServiceLocator services, string[] remaining)
 {
     string? tag = null;
+    string? sort = null;
     for (var i = 0; i < remaining.Length - 1; i++)
     {
         if (remaining[i] is "--tag" or "-t")
             tag = remaining[i + 1];
+        if (remaining[i] is "--sort" or "-s")
+            sort = remaining[i + 1];
     }
-    return await ListCommand.RunAsync(services, tag);
+    return await ListCommand.RunAsync(services, tag, sort);
+}
+
+static async Task<int> HandleNotesAsync(ServiceLocator services, string[] remaining)
+{
+    var name = remaining.FirstOrDefault();
+    var note = remaining.Length > 1 ? string.Join(" ", remaining[1..]) : null;
+    return await NotesCommand.RunAsync(services, name, note);
+}
+
+static async Task<int> OpenLastAsync(ServiceLocator services)
+{
+    var usages = await services.UsageTracker.GetRecentAsync(1);
+    if (usages.Count == 0)
+    {
+        AnsiConsole.MarkupLine("\n  [dim]No history yet.[/]\n");
+        return 1;
+    }
+    return await OpenCommand.RunAsync(services, usages[0].ProjectName, run: false);
 }
 
 static async Task<int> OpenProject(ServiceLocator services, string name, string[] flags)
@@ -97,38 +123,44 @@ static int ShowHelp()
 {
     AnsiConsole.WriteLine();
     AnsiConsole.Write(new FigletText("devonic").Color(Color.Blue).LeftJustified());
-    AnsiConsole.MarkupLine("  [dim]Your projects, one command away.[/]\n");
+    AnsiConsole.WriteLine();
 
-    WriteSection("Launch", [
-        ("dev", "Interactive project picker"),
-        ("dev [green]<project>[/]", "Open in configured IDE"),
-        ("dev [green]<project>[/] --run", "Open IDE + run dev server"),
-        ("dev [green]<project>[/] --ide [dim]<ide>[/]", "Override IDE for this launch"),
-        ("dev [green]<project>[/] --shell", "Open terminal in project dir"),
+    WriteSection("Open", [
+        ("dev", "Pick from registered projects"),
+        ("dev [green]<name>[/]", "Open in configured IDE"),
+        ("dev [green]<name>[/] --run", "Open + run dev command"),
+        ("dev [green]<name>[/] --ide [dim]<ide>[/]", "One-off IDE override"),
+        ("dev [green]<name>[/] --shell", "Terminal at project root"),
+        ("dev --last", "Reopen last project"),
     ]);
 
     WriteSection("Manage", [
-        ("dev add", "Register a new project"),
-        ("dev remove [dim]<name>[/]", "Unregister a project"),
-        ("dev edit [dim]<name>[/]", "Update project settings"),
-        ("dev list [dim]--tag <tag>[/]", "Show all projects"),
+        ("dev add", "Register a project"),
+        ("dev init", "Register current directory"),
+        ("dev remove [dim]<name>[/]", "Unregister"),
+        ("dev edit [dim]<name>[/]", "Change settings"),
+        ("dev list [dim]--tag <t> --sort <s>[/]", "All projects (sort: opens, recent)"),
     ]);
 
-    WriteSection("Discover", [
-        ("dev search [dim]<text>[/]", "Find by name, alias, or tag"),
-        ("dev recent", "Last opened projects"),
-        ("dev fav", "Your starred projects"),
+    WriteSection("Find", [
+        ("dev search [dim]<text>[/]", "Search by name, alias, or tag"),
+        ("dev recent", "Recently opened"),
+        ("dev fav", "Starred projects"),
+        ("dev cd [dim]<name>[/]", "Print project path"),
     ]);
 
-    WriteSection("Automate", [
-        ("dev scan [dim]<dir>[/]", "Detect & bulk-register projects"),
-        ("dev clone [dim]<url>[/]", "Git clone + auto-register"),
+    WriteSection("Setup", [
+        ("dev scan [dim]<dir>[/]", "Auto-detect and bulk-register"),
+        ("dev clone [dim]<url>[/]", "Clone + register in one step"),
+        ("dev group [dim]<create|open|rm>[/]", "Manage project groups"),
     ]);
 
-    WriteSection("Maintain", [
-        ("dev stats", "Usage dashboard"),
-        ("dev doctor", "Health check all projects"),
-        ("dev config", "Global settings"),
+    WriteSection("Info", [
+        ("dev stats", "Usage stats"),
+        ("dev doctor [dim]--fix[/]", "Check paths and git status"),
+        ("dev config", "View or change settings"),
+        ("dev notes [dim]<name> \"text\"[/]", "Per-project notes"),
+        ("dev completions [dim]<shell>[/]", "Tab completion script"),
     ]);
 
     return 0;
@@ -138,13 +170,13 @@ static void WriteSection(string title, (string cmd, string desc)[] rows)
 {
     AnsiConsole.MarkupLine($"  [bold]{title}[/]");
     foreach (var (cmd, desc) in rows)
-        AnsiConsole.MarkupLine($"    {cmd,-34} [dim]{desc}[/]");
+        AnsiConsole.MarkupLine($"    {cmd,-38} [dim]{desc}[/]");
     AnsiConsole.WriteLine();
 }
 
 static int ShowVersion()
 {
-    AnsiConsole.MarkupLine("[bold blue]devonic[/] [dim]v0.2.1[/]");
+    AnsiConsole.MarkupLine("[bold blue]devonic[/] [dim]v0.3.0[/]");
     return 0;
 }
 

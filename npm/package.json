@@ -1,6 +1,6 @@
 {
   "name": "devonic",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "Open your projects fast from the terminal",
   "license": "MIT",
   "repository": {
@@ -24,7 +24,8 @@
   },
   "files": [
     "bin/",
-    "scripts/"
+    "scripts/",
+    "README.md"
   ],
   "os": [
     "win32",

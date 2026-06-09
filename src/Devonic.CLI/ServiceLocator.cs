@@ -15,6 +15,7 @@ internal sealed class ServiceLocator
     public IProjectRepository ProjectRepository { get; } = new JsonProjectRepository(Path.Combine(BasePath, "projects.json"));
     public IConfigRepository ConfigRepository { get; } = new JsonConfigRepository(Path.Combine(BasePath, "config.json"));
     public IUsageTracker UsageTracker { get; } = new JsonUsageTracker(Path.Combine(BasePath, "usage.json"));
+    public IGroupRepository GroupRepository { get; } = new JsonGroupRepository(Path.Combine(BasePath, "groups.json"));
     public IGitService GitService { get; } = new GitService();
     public IIdeOpener IdeOpener { get; }
 

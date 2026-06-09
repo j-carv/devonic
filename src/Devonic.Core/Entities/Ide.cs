@@ -2,7 +2,13 @@ namespace Devonic.Core.Entities;
 
 public enum Ide
 {
+    VsCode,
     Rider,
     IntelliJ,
-    VsCode
+    WebStorm,
+    VisualStudio,
+    Cursor,
+    Zed,
+    Fleet,
+    Neovim
 }
