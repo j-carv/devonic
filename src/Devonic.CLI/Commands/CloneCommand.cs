@@ -9,7 +9,7 @@ internal static class CloneCommand
     {
         if (string.IsNullOrWhiteSpace(url))
         {
-            AnsiConsole.MarkupLine("[red]  Usage: dev clone <git-url>[/]");
+            AnsiConsole.MarkupLine("\n  [red]x[/] Missing URL. Usage: [green]dev clone <git-url>[/]\n");
             return 1;
         }
 
@@ -19,28 +19,36 @@ internal static class CloneCommand
         if (config.DefaultProjectsPath is null)
         {
             targetPath = AnsiConsole.Prompt(
-                new TextPrompt<string>("  Clone to [green]directory[/]:")
+                new TextPrompt<string>("  [green]Clone to:[/]")
                     .DefaultValue(Directory.GetCurrentDirectory()));
         }
 
         var ide = config.DefaultIde ?? AnsiConsole.Prompt(
             new SelectionPrompt<Ide>()
-                .Title("  Select [green]IDE[/] for this project:")
+                .Title("  [green]IDE for this project:[/]")
                 .AddChoices(Enum.GetValues<Ide>())
                 .UseConverter(i => i.ToString()));
 
         var result = await AnsiConsole.Status()
             .Spinner(Spinner.Known.Dots)
-            .StartAsync("  Cloning repository...", async _ =>
+            .StartAsync("Cloning...", async _ =>
                 await services.CloneProject.ExecuteAsync(url, ide, targetPath));
 
         if (result.IsSuccess)
         {
-            AnsiConsole.MarkupLine($"[green]  -> Repository cloned and registered.[/]");
+            AnsiConsole.MarkupLine($"\n  [green]+[/] Cloned and registered. Open it with [green]dev {Markup.Escape(ExtractRepoName(url))}[/]\n");
             return 0;
         }
 
-        AnsiConsole.MarkupLine($"[red]  Error: {Markup.Escape(result.Error!)}[/]");
+        AnsiConsole.MarkupLine($"\n  [red]x[/] {Markup.Escape(result.Error!)}\n");
         return 1;
+    }
+
+    private static string ExtractRepoName(string url)
+    {
+        var name = url.Split('/').Last();
+        if (name.EndsWith(".git", StringComparison.OrdinalIgnoreCase))
+            name = name[..^4];
+        return name;
     }
 }

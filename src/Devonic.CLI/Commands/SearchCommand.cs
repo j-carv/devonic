@@ -10,27 +10,34 @@ internal static class SearchCommand
 
         if (results.Count == 0)
         {
-            AnsiConsole.MarkupLine($"[yellow]  No projects matching '{Markup.Escape(query)}'.[/]");
+            AnsiConsole.MarkupLine($"\n  [dim]No matches for[/] [bold]'{Markup.Escape(query)}'[/]\n");
             return 0;
         }
 
+        AnsiConsole.WriteLine();
         var table = new Table()
             .Border(TableBorder.Rounded)
+            .Title($"[bold]{results.Count} match(es) for '{Markup.Escape(query)}'[/]")
             .AddColumn("[bold]Name[/]")
+            .AddColumn("[bold]Alias[/]")
             .AddColumn("[bold]IDE[/]")
-            .AddColumn("[bold]Path[/]");
+            .AddColumn("[bold]Tags[/]");
 
         foreach (var p in results)
         {
+            var tagsCol = p.Tags.Count > 0
+                ? string.Join(" ", p.Tags.Select(t => $"[dim]#{Markup.Escape(t)}[/]"))
+                : "[dim]-[/]";
+
             table.AddRow(
-                p.IsFavorite ? $"[yellow]{Markup.Escape(p.Name)}[/]" : Markup.Escape(p.Name),
+                p.IsFavorite ? $"[yellow]*[/] [bold]{Markup.Escape(p.Name)}[/]" : $"  [bold]{Markup.Escape(p.Name)}[/]",
+                p.Alias is not null ? $"[cyan]{Markup.Escape(p.Alias)}[/]" : "[dim]-[/]",
                 p.Ide.ToString(),
-                Markup.Escape(p.Path));
+                tagsCol);
         }
 
-        AnsiConsole.WriteLine();
         AnsiConsole.Write(table);
-        AnsiConsole.MarkupLine($"\n  [dim]{results.Count} result(s)[/]");
+        AnsiConsole.WriteLine();
         return 0;
     }
 }

@@ -11,27 +11,30 @@ internal static class FavoritesCommand
 
         if (favorites.Count == 0)
         {
-            AnsiConsole.MarkupLine("[yellow]  No favorites. Use 'dev edit <name>' to mark a project as favorite.[/]");
+            AnsiConsole.MarkupLine("\n  [dim]No starred projects. Use[/] [green]dev edit <name>[/] [dim]to star one.[/]\n");
             return 0;
         }
 
+        AnsiConsole.WriteLine();
         var table = new Table()
             .Border(TableBorder.Rounded)
-            .AddColumn("[bold yellow]Name[/]")
+            .Title($"[bold yellow]Starred ({favorites.Count})[/]")
+            .AddColumn("[bold]Name[/]")
+            .AddColumn("[bold]Alias[/]")
             .AddColumn("[bold]IDE[/]")
             .AddColumn("[bold]Path[/]");
 
         foreach (var p in favorites.OrderBy(p => p.Name))
         {
             table.AddRow(
-                $"[yellow]{Markup.Escape(p.Name)}[/]",
+                $"[yellow]*[/] [bold]{Markup.Escape(p.Name)}[/]",
+                p.Alias is not null ? $"[cyan]{Markup.Escape(p.Alias)}[/]" : "[dim]-[/]",
                 p.Ide.ToString(),
-                Markup.Escape(p.Path));
+                $"[dim]{Markup.Escape(p.Path)}[/]");
         }
 
-        AnsiConsole.WriteLine();
         AnsiConsole.Write(table);
-        AnsiConsole.MarkupLine($"\n  [dim]{favorites.Count} favorite(s)[/]");
+        AnsiConsole.WriteLine();
         return 0;
     }
 }

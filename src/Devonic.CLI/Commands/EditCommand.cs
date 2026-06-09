@@ -12,57 +12,55 @@ internal static class EditCommand
             var projects = await services.ProjectRepository.GetAllAsync();
             if (projects.Count == 0)
             {
-                AnsiConsole.MarkupLine("[yellow]  No projects registered.[/]");
+                AnsiConsole.MarkupLine("\n  [dim]Nothing to edit — no projects registered.[/]\n");
                 return 1;
             }
 
             name = AnsiConsole.Prompt(
                 new SelectionPrompt<string>()
-                    .Title("  Select project to [green]edit[/]:")
+                    .Title("\n  Select project to [green]edit[/]:")
                     .AddChoices(projects.Select(p => p.Name)));
         }
 
         var existing = await services.ProjectRepository.GetByNameAsync(name);
         if (existing is null)
         {
-            AnsiConsole.MarkupLine($"[red]  Error: Project '{Markup.Escape(name)}' not found.[/]");
+            AnsiConsole.MarkupLine($"\n  [red]x[/] Project '{Markup.Escape(name)}' not found.\n");
             return 1;
         }
 
-        AnsiConsole.MarkupLine($"  Editing [green]{Markup.Escape(name)}[/] [dim](Enter to keep current)[/]\n");
+        AnsiConsole.MarkupLine($"\n  [bold]Editing {Markup.Escape(name)}[/] [dim]— press Enter to keep current value[/]\n");
 
         var path = AnsiConsole.Prompt(
-            new TextPrompt<string>($"  Path [dim]({Markup.Escape(existing.Path)})[/]:")
+            new TextPrompt<string>($"  [green]Path[/] [dim]({Markup.Escape(existing.Path)}):[/]")
                 .AllowEmpty());
         if (string.IsNullOrWhiteSpace(path)) path = existing.Path;
 
         var ide = AnsiConsole.Prompt(
             new SelectionPrompt<Ide>()
-                .Title($"  IDE [dim](current: {existing.Ide})[/]:")
+                .Title($"  [green]IDE[/] [dim](current: {existing.Ide}):[/]")
                 .AddChoices(Enum.GetValues<Ide>())
                 .UseConverter(i => i.ToString()));
 
-        var currentAlias = existing.Alias ?? "(none)";
         var alias = AnsiConsole.Prompt(
-            new TextPrompt<string>($"  Alias [dim]({Markup.Escape(currentAlias)})[/]:")
+            new TextPrompt<string>($"  [green]Alias[/] [dim]({Markup.Escape(existing.Alias ?? "none")}):[/]")
                 .AllowEmpty());
         if (string.IsNullOrWhiteSpace(alias)) alias = existing.Alias;
 
-        var currentRun = existing.RunCommand ?? "(none)";
         var runCommand = AnsiConsole.Prompt(
-            new TextPrompt<string>($"  Run command [dim]({Markup.Escape(currentRun)})[/]:")
+            new TextPrompt<string>($"  [green]Run command[/] [dim]({Markup.Escape(existing.RunCommand ?? "none")}):[/]")
                 .AllowEmpty());
         if (string.IsNullOrWhiteSpace(runCommand)) runCommand = existing.RunCommand;
 
-        var currentTags = existing.Tags.Count > 0 ? string.Join(", ", existing.Tags) : "(none)";
+        var tagsStr = existing.Tags.Count > 0 ? string.Join(", ", existing.Tags) : "none";
         var tagsInput = AnsiConsole.Prompt(
-            new TextPrompt<string>($"  Tags [dim]({Markup.Escape(currentTags)})[/]:")
+            new TextPrompt<string>($"  [green]Tags[/] [dim]({Markup.Escape(tagsStr)}):[/]")
                 .AllowEmpty());
         var tags = string.IsNullOrWhiteSpace(tagsInput)
             ? existing.Tags
             : tagsInput.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
 
-        var isFavorite = AnsiConsole.Confirm("  Favorite?", defaultValue: existing.IsFavorite);
+        var isFavorite = AnsiConsole.Confirm("  Starred?", defaultValue: existing.IsFavorite);
 
         var updated = new Project
         {
@@ -79,11 +77,11 @@ internal static class EditCommand
 
         if (result.IsSuccess)
         {
-            AnsiConsole.MarkupLine($"\n[green]  -> Project '{Markup.Escape(name)}' updated.[/]");
+            AnsiConsole.MarkupLine($"\n  [green]>[/] [bold]{Markup.Escape(name)}[/] updated.\n");
             return 0;
         }
 
-        AnsiConsole.MarkupLine($"\n[red]  Error: {Markup.Escape(result.Error!)}[/]");
+        AnsiConsole.MarkupLine($"\n  [red]x[/] {Markup.Escape(result.Error!)}\n");
         return 1;
     }
 }

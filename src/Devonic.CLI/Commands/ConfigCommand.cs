@@ -13,7 +13,7 @@ internal static class ConfigCommand
         return args[0].ToLowerInvariant() switch
         {
             "show" => await ShowAsync(services),
-            "set" when args.Length >= 3 => await SetAsync(services, args[1], args[2]),
+            "set" when args.Length >= 3 => await SetAsync(services, args[1], string.Join(" ", args[2..])),
             "set" => ShowSetUsage(),
             _ => ShowUsage()
         };
@@ -23,22 +23,19 @@ internal static class ConfigCommand
     {
         var config = await services.ConfigRepository.GetAsync();
 
-        var table = new Table()
-            .Border(TableBorder.Rounded)
-            .AddColumn("[bold]Setting[/]")
-            .AddColumn("[bold]Value[/]");
-
-        table.AddRow("Default IDE", config.DefaultIde?.ToString() ?? "[dim](not set)[/]");
-        table.AddRow("Default projects path", Markup.Escape(config.DefaultProjectsPath ?? "(not set)"));
-
-        foreach (var (ide, path) in config.IdePaths)
-            table.AddRow($"IDE path: {ide}", Markup.Escape(path));
-
-        if (config.IdePaths.Count == 0)
-            table.AddRow("IDE paths", "[dim](using defaults)[/]");
-
         AnsiConsole.WriteLine();
-        AnsiConsole.Write(table);
+        var grid = new Grid().AddColumn().AddColumn();
+        grid.AddRow("[bold]Default IDE[/]", config.DefaultIde?.ToString() ?? "[dim]not set[/]");
+        grid.AddRow("[bold]Projects path[/]", config.DefaultProjectsPath is not null ? Markup.Escape(config.DefaultProjectsPath) : "[dim]not set[/]");
+
+        if (config.IdePaths.Count > 0)
+            foreach (var (ide, path) in config.IdePaths)
+                grid.AddRow($"[bold]{ide} path[/]", Markup.Escape(path));
+        else
+            grid.AddRow("[bold]IDE paths[/]", "[dim]using defaults[/]");
+
+        AnsiConsole.Write(new Panel(grid).Border(BoxBorder.Rounded).Header("[bold]Configuration[/]").Expand());
+        AnsiConsole.WriteLine();
         return 0;
     }
 
@@ -55,7 +52,7 @@ internal static class ConfigCommand
             case "defaultide":
                 if (!Enum.TryParse<Ide>(value, ignoreCase: true, out var ide))
                 {
-                    AnsiConsole.MarkupLine($"[red]  Invalid IDE. Options: {string.Join(", ", Enum.GetNames<Ide>())}[/]");
+                    AnsiConsole.MarkupLine($"\n  [red]x[/] Unknown IDE. Available: {string.Join(", ", Enum.GetNames<Ide>())}\n");
                     return 1;
                 }
                 defaultIde = ide;
@@ -71,14 +68,14 @@ internal static class ConfigCommand
                     var ideName = key["idepath.".Length..];
                     if (!Enum.TryParse<Ide>(ideName, ignoreCase: true, out var targetIde))
                     {
-                        AnsiConsole.MarkupLine($"[red]  Invalid IDE. Options: {string.Join(", ", Enum.GetNames<Ide>())}[/]");
+                        AnsiConsole.MarkupLine($"\n  [red]x[/] Unknown IDE. Available: {string.Join(", ", Enum.GetNames<Ide>())}\n");
                         return 1;
                     }
                     idePaths[targetIde] = value;
                 }
                 else
                 {
-                    AnsiConsole.MarkupLine($"[red]  Unknown setting '{Markup.Escape(key)}'.[/]");
+                    AnsiConsole.MarkupLine($"\n  [red]x[/] Unknown key '{Markup.Escape(key)}'.\n");
                     return ShowSetUsage();
                 }
                 break;
@@ -92,22 +89,22 @@ internal static class ConfigCommand
         };
 
         await services.ConfigRepository.SaveAsync(updated);
-        AnsiConsole.MarkupLine($"[green]  -> Configuration updated.[/]");
+        AnsiConsole.MarkupLine($"\n  [green]>[/] [bold]{Markup.Escape(key)}[/] set to [cyan]{Markup.Escape(value)}[/]\n");
         return 0;
     }
 
     private static int ShowSetUsage()
     {
-        AnsiConsole.MarkupLine("[yellow]  Usage: dev config set <key> <value>[/]");
-        AnsiConsole.MarkupLine("[dim]  Keys: defaultIde, defaultPath, idePath.<ide>[/]");
-        AnsiConsole.MarkupLine("[dim]  Example: dev config set defaultIde vscode[/]");
-        AnsiConsole.MarkupLine("[dim]  Example: dev config set idePath.rider C:\\tools\\rider.exe[/]");
+        AnsiConsole.MarkupLine("\n  [bold]Usage:[/] dev config set [green]<key>[/] [green]<value>[/]");
+        AnsiConsole.MarkupLine("  [dim]Keys: defaultIde, defaultPath, idePath.<ide>[/]");
+        AnsiConsole.MarkupLine("  [dim]Example: dev config set defaultIde vscode[/]");
+        AnsiConsole.MarkupLine("  [dim]Example: dev config set idePath.rider C:\\tools\\rider.exe[/]\n");
         return 1;
     }
 
     private static int ShowUsage()
     {
-        AnsiConsole.MarkupLine("[yellow]  Usage: dev config [show|set <key> <value>][/]");
+        AnsiConsole.MarkupLine("\n  [bold]Usage:[/] dev config [dim][show | set <key> <value>][/]\n");
         return 1;
     }
 }

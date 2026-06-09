@@ -10,59 +10,45 @@ internal static class DoctorCommand
 
         if (projects.Count == 0)
         {
-            AnsiConsole.MarkupLine("[yellow]  No projects registered.[/]");
+            AnsiConsole.MarkupLine("\n  [dim]No projects to check.[/]\n");
             return 0;
         }
 
-        AnsiConsole.MarkupLine("\n  [bold]Project health check[/]\n");
+        AnsiConsole.WriteLine();
+        AnsiConsole.Write(new Rule("[bold]Health check[/]").LeftJustified());
+        AnsiConsole.WriteLine();
 
+        var healthy = 0;
         var issues = 0;
-        var table = new Table()
-            .Border(TableBorder.Rounded)
-            .AddColumn("[bold]Project[/]")
-            .AddColumn("[bold]Status[/]")
-            .AddColumn("[bold]Issues[/]");
 
         foreach (var project in projects.OrderBy(p => p.Name))
         {
             var problems = new List<string>();
 
             if (!Directory.Exists(project.Path))
-                problems.Add("Path does not exist");
-
-            if (!HasGitRepo(project.Path))
-                problems.Add("No git repository");
+                problems.Add("path missing");
+            else if (!Directory.Exists(Path.Combine(project.Path, ".git")))
+                problems.Add("no git repo");
 
             if (problems.Count == 0)
             {
-                table.AddRow(
-                    Markup.Escape(project.Name),
-                    "[green]OK[/]",
-                    "[dim]-[/]");
+                healthy++;
+                AnsiConsole.MarkupLine($"  [green]OK[/]  {Markup.Escape(project.Name)}");
             }
             else
             {
-                issues += problems.Count;
-                table.AddRow(
-                    Markup.Escape(project.Name),
-                    "[red]ISSUES[/]",
-                    $"[yellow]{Markup.Escape(string.Join("; ", problems))}[/]");
+                issues++;
+                var detail = string.Join(", ", problems);
+                AnsiConsole.MarkupLine($"  [red]!![/]  {Markup.Escape(project.Name)} [dim]— {detail}[/]");
             }
         }
 
-        AnsiConsole.Write(table);
-
+        AnsiConsole.WriteLine();
         if (issues == 0)
-            AnsiConsole.MarkupLine("\n  [green]All projects are healthy.[/]");
+            AnsiConsole.MarkupLine($"  [green]All {healthy} project(s) healthy.[/]\n");
         else
-            AnsiConsole.MarkupLine($"\n  [yellow]{issues} issue(s) found across {projects.Count} project(s).[/]");
+            AnsiConsole.MarkupLine($"  [green]{healthy} healthy[/], [red]{issues} with issues[/]\n");
 
         return issues > 0 ? 1 : 0;
-    }
-
-    private static bool HasGitRepo(string path)
-    {
-        if (!Directory.Exists(path)) return false;
-        return Directory.Exists(Path.Combine(path, ".git"));
     }
 }

@@ -9,19 +9,21 @@ internal static class OpenCommand
     {
         var result = await services.OpenProject.ExecuteAsync(projectName, run, ideOverride, shell);
 
-        if (result.IsSuccess)
+        if (!result.IsSuccess)
         {
-            if (shell)
-                AnsiConsole.MarkupLine($"[green]  -> Opening shell in '{Markup.Escape(projectName)}'...[/]");
-            else
-                AnsiConsole.MarkupLine($"[green]  -> Opening '{Markup.Escape(projectName)}'...[/]");
-
-            if (run)
-                AnsiConsole.MarkupLine("[dim]  -> Running configured command...[/]");
-            return 0;
+            AnsiConsole.MarkupLine($"\n  [red]x[/] {Markup.Escape(result.Error!)}");
+            AnsiConsole.MarkupLine("[dim]    Run 'dev list' to see registered projects or 'dev add' to register one.[/]\n");
+            return 1;
         }
 
-        AnsiConsole.MarkupLine($"[red]  Error: {Markup.Escape(result.Error!)}[/]");
-        return 1;
+        var ide = ideOverride?.ToString() ?? "";
+        if (shell)
+            AnsiConsole.MarkupLine($"\n  [green]>[/] Shell opened in [bold]{Markup.Escape(projectName)}[/]\n");
+        else if (run)
+            AnsiConsole.MarkupLine($"\n  [green]>[/] Launched [bold]{Markup.Escape(projectName)}[/] + running command\n");
+        else
+            AnsiConsole.MarkupLine($"\n  [green]>[/] Launched [bold]{Markup.Escape(projectName)}[/]{(ideOverride.HasValue ? $" in {ide}" : "")}\n");
+
+        return 0;
     }
 }

@@ -14,17 +14,17 @@ var remaining = args.Length > 1 ? args[1..] : [];
 return command switch
 {
     "add" => await AddCommand.RunAsync(services),
-    "remove" => await RemoveCommand.RunAsync(services, remaining.FirstOrDefault()),
+    "remove" or "rm" => await RemoveCommand.RunAsync(services, remaining.FirstOrDefault()),
     "edit" => await EditCommand.RunAsync(services, remaining.FirstOrDefault()),
     "list" or "ls" => await HandleListAsync(services, remaining),
-    "search" when remaining.Length > 0 => await SearchCommand.RunAsync(services, string.Join(" ", remaining)),
-    "search" => Error("Usage: dev search <query>"),
+    "search" or "s" when remaining.Length > 0 => await SearchCommand.RunAsync(services, string.Join(" ", remaining)),
+    "search" or "s" => Fail("Usage: dev search <query>"),
     "recent" => await RecentCommand.RunAsync(services),
     "favorites" or "fav" => await FavoritesCommand.RunAsync(services),
     "clone" => await CloneCommand.RunAsync(services, remaining.FirstOrDefault()),
     "config" => await ConfigCommand.RunAsync(services, remaining),
     "scan" => await ScanCommand.RunAsync(services, remaining.FirstOrDefault()),
-    "doctor" => await DoctorCommand.RunAsync(services),
+    "doctor" or "check" => await DoctorCommand.RunAsync(services),
     "stats" => await StatsCommand.RunAsync(services),
     "--help" or "-h" or "help" => ShowHelp(),
     "--version" or "-v" => ShowVersion(),
@@ -37,29 +37,28 @@ static async Task<int> InteractiveSelectAsync(ServiceLocator services)
 
     if (projects.Count == 0)
     {
-        ShowHelp();
+        AnsiConsole.MarkupLine("\n  [dim]No projects yet.[/] Run [green]dev add[/] to register your first project.\n");
         return 0;
     }
 
-    var choices = projects
-        .OrderBy(p => p.Name)
-        .Select(p =>
-        {
-            var label = p.IsFavorite ? $"* {p.Name}" : $"  {p.Name}";
-            if (p.Tags.Count > 0) label += $" [{string.Join(", ", p.Tags)}]";
-            return label;
-        })
-        .ToList();
+    var lookup = new Dictionary<string, string>();
+    foreach (var p in projects.OrderByDescending(p => p.IsFavorite).ThenBy(p => p.Name))
+    {
+        var display = p.IsFavorite ? $"[yellow]*[/] {p.Name}" : $"  {p.Name}";
+        if (p.Alias is not null) display += $" [dim]({p.Alias})[/]";
+        if (p.Tags.Count > 0) display += $" [dim]{string.Join(" ", p.Tags.Select(t => $"#{t}"))}[/]";
+        display += $"  [dim]| {p.Ide}[/]";
+        lookup[display] = p.Name;
+    }
 
     var selected = AnsiConsole.Prompt(
         new SelectionPrompt<string>()
-            .Title("[bold]Select a project to open:[/]")
+            .Title("\n  [bold]Pick a project[/]")
             .PageSize(15)
             .HighlightStyle(new Style(Color.Green))
-            .AddChoices(choices));
+            .AddChoices(lookup.Keys));
 
-    var name = selected.TrimStart('*', ' ').Split(" [")[0];
-    return await OpenCommand.RunAsync(services, name, run: false);
+    return await OpenCommand.RunAsync(services, lookup[selected], run: false);
 }
 
 static async Task<int> HandleListAsync(ServiceLocator services, string[] remaining)
@@ -86,7 +85,7 @@ static async Task<int> OpenProject(ServiceLocator services, string name, string[
             ideOverride = ide;
         else
         {
-            AnsiConsole.MarkupLine($"[red]  Invalid IDE '{Markup.Escape(flags[ideIndex + 1])}'. Options: {string.Join(", ", Enum.GetNames<Ide>())}[/]");
+            AnsiConsole.MarkupLine($"[red]  Unknown IDE '{Markup.Escape(flags[ideIndex + 1])}'.[/] Available: {string.Join(", ", Enum.GetNames<Ide>())}");
             return 1;
         }
     }
@@ -97,52 +96,59 @@ static async Task<int> OpenProject(ServiceLocator services, string name, string[
 static int ShowHelp()
 {
     AnsiConsole.WriteLine();
-    AnsiConsole.Write(new Rule("[bold blue]devonic[/]").LeftJustified());
-    AnsiConsole.MarkupLine("  [dim]Open your projects fast from the terminal[/]\n");
+    AnsiConsole.Write(new FigletText("devonic").Color(Color.Blue).LeftJustified());
+    AnsiConsole.MarkupLine("  [dim]Your projects, one command away.[/]\n");
 
-    var table = new Table()
-        .Border(TableBorder.None)
-        .HideHeaders()
-        .AddColumn("")
-        .AddColumn("");
+    WriteSection("Launch", [
+        ("dev", "Interactive project picker"),
+        ("dev [green]<project>[/]", "Open in configured IDE"),
+        ("dev [green]<project>[/] --run", "Open IDE + run dev server"),
+        ("dev [green]<project>[/] --ide [dim]<ide>[/]", "Override IDE for this launch"),
+        ("dev [green]<project>[/] --shell", "Open terminal in project dir"),
+    ]);
 
-    table.AddRow("[green]dev[/]", "Interactive project selector");
-    table.AddRow("[green]dev <project>[/]", "Open a project in its configured IDE");
-    table.AddRow("[green]dev <project> --run[/]", "Open and run configured command");
-    table.AddRow("[green]dev <project> --ide <ide>[/]", "Open with a different IDE");
-    table.AddRow("[green]dev <project> --shell[/]", "Open a terminal in the project directory");
-    table.AddRow("", "");
-    table.AddRow("[yellow]dev add[/]", "Register a new project");
-    table.AddRow("[yellow]dev remove[/] [dim]<name>[/]", "Remove a project");
-    table.AddRow("[yellow]dev edit[/] [dim]<name>[/]", "Edit a project");
-    table.AddRow("[yellow]dev list[/] [dim]--tag <tag>[/]", "List all projects (optionally filter by tag)");
-    table.AddRow("", "");
-    table.AddRow("[cyan]dev search <text>[/]", "Search projects by name, alias, or tag");
-    table.AddRow("[cyan]dev recent[/]", "Show recently opened projects");
-    table.AddRow("[cyan]dev favorites[/]", "Show favorite projects");
-    table.AddRow("", "");
-    table.AddRow("[magenta]dev scan[/] [dim]<dir>[/]", "Auto-detect and register projects in a directory");
-    table.AddRow("[magenta]dev clone <url>[/]", "Clone a repo and register it");
-    table.AddRow("", "");
-    table.AddRow("[blue]dev stats[/]", "Show usage statistics");
-    table.AddRow("[blue]dev doctor[/]", "Check health of all projects");
-    table.AddRow("[blue]dev config[/]", "Show or set global configuration");
-    table.AddRow("", "");
-    table.AddRow("[dim]dev --version[/]", "Show version");
-    table.AddRow("[dim]dev --help[/]", "Show this help");
+    WriteSection("Manage", [
+        ("dev add", "Register a new project"),
+        ("dev remove [dim]<name>[/]", "Unregister a project"),
+        ("dev edit [dim]<name>[/]", "Update project settings"),
+        ("dev list [dim]--tag <tag>[/]", "Show all projects"),
+    ]);
 
-    AnsiConsole.Write(table);
-    AnsiConsole.WriteLine();
+    WriteSection("Discover", [
+        ("dev search [dim]<text>[/]", "Find by name, alias, or tag"),
+        ("dev recent", "Last opened projects"),
+        ("dev fav", "Your starred projects"),
+    ]);
+
+    WriteSection("Automate", [
+        ("dev scan [dim]<dir>[/]", "Detect & bulk-register projects"),
+        ("dev clone [dim]<url>[/]", "Git clone + auto-register"),
+    ]);
+
+    WriteSection("Maintain", [
+        ("dev stats", "Usage dashboard"),
+        ("dev doctor", "Health check all projects"),
+        ("dev config", "Global settings"),
+    ]);
+
     return 0;
+}
+
+static void WriteSection(string title, (string cmd, string desc)[] rows)
+{
+    AnsiConsole.MarkupLine($"  [bold]{title}[/]");
+    foreach (var (cmd, desc) in rows)
+        AnsiConsole.MarkupLine($"    {cmd,-34} [dim]{desc}[/]");
+    AnsiConsole.WriteLine();
 }
 
 static int ShowVersion()
 {
-    AnsiConsole.MarkupLine("[bold]devonic[/] v0.2.0");
+    AnsiConsole.MarkupLine("[bold blue]devonic[/] [dim]v0.2.1[/]");
     return 0;
 }
 
-static int Error(string message)
+static int Fail(string message)
 {
     AnsiConsole.MarkupLine($"[red]  {Markup.Escape(message)}[/]");
     return 1;

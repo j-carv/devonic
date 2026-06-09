@@ -7,30 +7,32 @@ internal static class AddCommand
 {
     public static async Task<int> RunAsync(ServiceLocator services)
     {
-        var name = AnsiConsole.Ask<string>("  Project [green]name[/]:");
-        var path = AnsiConsole.Ask<string>("  Project [green]path[/]:");
+        AnsiConsole.MarkupLine("\n  [bold]New project[/]\n");
+
+        var name = AnsiConsole.Ask<string>("  [green]Name:[/]");
+        var path = AnsiConsole.Ask<string>("  [green]Path:[/]");
         var ide = AnsiConsole.Prompt(
             new SelectionPrompt<Ide>()
-                .Title("  Select [green]IDE[/]:")
+                .Title("  [green]IDE:[/]")
                 .AddChoices(Enum.GetValues<Ide>())
                 .UseConverter(i => i.ToString()));
 
         var alias = AnsiConsole.Prompt(
-            new TextPrompt<string>("  [green]Alias[/] [dim](short name, optional)[/]:")
+            new TextPrompt<string>("  [green]Alias[/] [dim](optional):[/]")
                 .AllowEmpty());
 
         string? runCommand = null;
-        if (AnsiConsole.Confirm("  Add a [green]run command[/]?", defaultValue: false))
-            runCommand = AnsiConsole.Ask<string>("  Run command:");
+        if (AnsiConsole.Confirm("  Set a run command?", defaultValue: false))
+            runCommand = AnsiConsole.Ask<string>("  [green]Command:[/]");
 
         var tagsInput = AnsiConsole.Prompt(
-            new TextPrompt<string>("  [green]Tags[/] [dim](comma-separated, optional)[/]:")
+            new TextPrompt<string>("  [green]Tags[/] [dim](comma-separated, optional):[/]")
                 .AllowEmpty());
         var tags = string.IsNullOrWhiteSpace(tagsInput)
             ? new List<string>()
             : tagsInput.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
 
-        var isFavorite = AnsiConsole.Confirm("  Mark as [yellow]favorite[/]?", defaultValue: false);
+        var isFavorite = AnsiConsole.Confirm("  Star this project?", defaultValue: false);
 
         var project = new Project
         {
@@ -47,11 +49,11 @@ internal static class AddCommand
 
         if (result.IsSuccess)
         {
-            AnsiConsole.MarkupLine($"[green]  -> Project '{Markup.Escape(name)}' added.[/]");
+            AnsiConsole.MarkupLine($"\n  [green]+[/] [bold]{Markup.Escape(name)}[/] registered. Open it with [green]dev {Markup.Escape(alias ?? name)}[/]\n");
             return 0;
         }
 
-        AnsiConsole.MarkupLine($"[red]  Error: {Markup.Escape(result.Error!)}[/]");
+        AnsiConsole.MarkupLine($"\n  [red]x[/] {Markup.Escape(result.Error!)}\n");
         return 1;
     }
 }

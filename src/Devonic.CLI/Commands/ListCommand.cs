@@ -12,44 +12,42 @@ internal static class ListCommand
 
         if (projects.Count == 0)
         {
-            var msg = tagFilter is not null
-                ? $"No projects with tag '{Markup.Escape(tagFilter)}'."
-                : "No projects registered. Use 'dev add' to add one.";
-            AnsiConsole.MarkupLine($"[yellow]  {msg}[/]");
+            if (tagFilter is not null)
+                AnsiConsole.MarkupLine($"\n  [dim]No projects tagged[/] [yellow]#{Markup.Escape(tagFilter)}[/]\n");
+            else
+                AnsiConsole.MarkupLine("\n  [dim]No projects yet.[/] Run [green]dev add[/] or [green]dev scan[/] to get started.\n");
             return 0;
         }
 
+        var title = tagFilter is not null ? $"Projects tagged #{tagFilter}" : $"{projects.Count} project(s)";
+        AnsiConsole.WriteLine();
+
         var table = new Table()
             .Border(TableBorder.Rounded)
+            .Title($"[bold]{Markup.Escape(title)}[/]")
             .AddColumn("[bold]Name[/]")
             .AddColumn("[bold]Alias[/]")
             .AddColumn("[bold]IDE[/]")
             .AddColumn("[bold]Path[/]")
-            .AddColumn("[bold]Tags[/]")
-            .AddColumn("[bold]Fav[/]");
+            .AddColumn("[bold]Tags[/]");
 
-        foreach (var p in projects.OrderBy(p => p.Name))
+        foreach (var p in projects.OrderByDescending(p => p.IsFavorite).ThenBy(p => p.Name))
         {
-            var nameCol = p.IsFavorite ? $"[yellow]{Markup.Escape(p.Name)}[/]" : Markup.Escape(p.Name);
-            var tagsCol = p.Tags.Count > 0 ? Markup.Escape(string.Join(", ", p.Tags)) : "[dim]-[/]";
+            var star = p.IsFavorite ? "[yellow]*[/] " : "  ";
+            var tagsCol = p.Tags.Count > 0
+                ? string.Join(" ", p.Tags.Select(t => $"[dim]#{Markup.Escape(t)}[/]"))
+                : "[dim]-[/]";
 
             table.AddRow(
-                nameCol,
-                Markup.Escape(p.Alias ?? "-"),
+                $"{star}[bold]{Markup.Escape(p.Name)}[/]",
+                p.Alias is not null ? $"[cyan]{Markup.Escape(p.Alias)}[/]" : "[dim]-[/]",
                 p.Ide.ToString(),
-                Markup.Escape(p.Path),
-                tagsCol,
-                p.IsFavorite ? "[yellow]*[/]" : "-");
+                $"[dim]{Markup.Escape(p.Path)}[/]",
+                tagsCol);
         }
 
-        AnsiConsole.WriteLine();
         AnsiConsole.Write(table);
-
-        if (tagFilter is not null)
-            AnsiConsole.MarkupLine($"\n  [dim]{projects.Count} project(s) tagged '{Markup.Escape(tagFilter)}'[/]");
-        else
-            AnsiConsole.MarkupLine($"\n  [dim]{projects.Count} project(s)[/]");
-
+        AnsiConsole.WriteLine();
         return 0;
     }
 }

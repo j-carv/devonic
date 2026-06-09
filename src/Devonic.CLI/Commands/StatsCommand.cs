@@ -10,28 +10,25 @@ internal static class StatsCommand
         var usages = await services.UsageTracker.GetRecentAsync(50);
 
         AnsiConsole.WriteLine();
-        AnsiConsole.Write(new Rule("[bold blue]devonic stats[/]").LeftJustified());
-        AnsiConsole.WriteLine();
+        AnsiConsole.Write(new FigletText("stats").Color(Color.Blue).LeftJustified());
 
-        // Overview
-        var overviewTable = new Table().Border(TableBorder.None).HideHeaders().AddColumn("").AddColumn("");
-        overviewTable.AddRow("[bold]Total projects[/]", projects.Count.ToString());
-        overviewTable.AddRow("[bold]Favorites[/]", projects.Count(p => p.IsFavorite).ToString());
-        overviewTable.AddRow("[bold]Total opens[/]", usages.Sum(u => u.OpenCount).ToString());
+        var grid = new Grid().AddColumn().AddColumn();
+        grid.AddRow("[bold]Projects[/]", $"[green]{projects.Count}[/]");
+        grid.AddRow("[bold]Starred[/]", $"[yellow]{projects.Count(p => p.IsFavorite)}[/]");
+        grid.AddRow("[bold]Total opens[/]", usages.Sum(u => u.OpenCount).ToString());
 
         var tags = projects.SelectMany(p => p.Tags).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
-        overviewTable.AddRow("[bold]Tags[/]", tags.Count > 0 ? string.Join(", ", tags) : "[dim]none[/]");
-        AnsiConsole.Write(overviewTable);
+        grid.AddRow("[bold]Tags[/]", tags.Count > 0
+            ? string.Join("  ", tags.Select(t => $"[dim]#{t}[/]"))
+            : "[dim]none[/]");
 
-        // Usage chart
+        AnsiConsole.Write(new Panel(grid).Border(BoxBorder.Rounded).Header("[bold]Overview[/]").Expand());
+
         if (usages.Count > 0)
         {
             AnsiConsole.WriteLine();
-            AnsiConsole.Write(new Rule("[dim]Most opened[/]").LeftJustified());
-            AnsiConsole.WriteLine();
-
-            var chart = new BarChart().Width(60);
-            var colors = new[] { Color.Green, Color.Blue, Color.Cyan1, Color.Yellow, Color.Magenta1, Color.Orange1 };
+            var chart = new BarChart().Width(60).Label("[bold]Most opened[/]");
+            var colors = new[] { Color.Green, Color.Cyan1, Color.Blue, Color.Yellow, Color.Magenta1, Color.Orange1 };
 
             foreach (var (usage, i) in usages.OrderByDescending(u => u.OpenCount).Take(10).Select((u, i) => (u, i)))
                 chart.AddItem(usage.ProjectName, usage.OpenCount, colors[i % colors.Length]);
@@ -39,19 +36,17 @@ internal static class StatsCommand
             AnsiConsole.Write(chart);
         }
 
-        // IDE distribution
-        AnsiConsole.WriteLine();
-        AnsiConsole.Write(new Rule("[dim]IDEs[/]").LeftJustified());
-        AnsiConsole.WriteLine();
+        var ideGroups = projects.GroupBy(p => p.Ide).OrderByDescending(g => g.Count()).ToList();
+        if (ideGroups.Count > 0)
+        {
+            AnsiConsole.WriteLine();
+            var ideChart = new BarChart().Width(60).Label("[bold]IDE usage[/]");
+            foreach (var group in ideGroups)
+                ideChart.AddItem(group.Key.ToString(), group.Count(), Color.Cyan1);
+            AnsiConsole.Write(ideChart);
+        }
 
-        var ideGroups = projects.GroupBy(p => p.Ide).OrderByDescending(g => g.Count());
-        var ideChart = new BarChart().Width(60);
-        foreach (var group in ideGroups)
-            ideChart.AddItem(group.Key.ToString(), group.Count(), Color.Cyan1);
-
-        AnsiConsole.Write(ideChart);
         AnsiConsole.WriteLine();
-
         return 0;
     }
 }
