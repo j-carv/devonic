@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using Devonic.Core.Entities;
 using Devonic.Core.Interfaces;
 using Devonic.Core.Results;
 
@@ -9,9 +10,9 @@ public sealed class OpenProjectUseCase(
     IIdeOpener ideOpener,
     IUsageTracker usageTracker)
 {
-    public async Task<Result> ExecuteAsync(string projectName, bool run = false)
+    public async Task<Result> ExecuteAsync(string projectName, bool run = false, Ide? ideOverride = null, bool shell = false)
     {
-        var project = await repository.GetByNameAsync(projectName);
+        var project = await repository.GetByNameOrAliasAsync(projectName);
 
         if (project is null)
             return Result.Failure($"Project '{projectName}' not found.");
@@ -19,7 +20,18 @@ public sealed class OpenProjectUseCase(
         if (!Directory.Exists(project.Path))
             return Result.Failure($"Path '{project.Path}' does not exist.");
 
-        var openResult = await ideOpener.OpenAsync(project);
+        if (shell)
+        {
+            OpenShell(project.Path);
+            await usageTracker.RecordUsageAsync(project.Name);
+            return Result.Success();
+        }
+
+        var target = ideOverride.HasValue
+            ? new Project { Name = project.Name, Path = project.Path, Ide = ideOverride.Value, RunCommand = project.RunCommand, IsFavorite = project.IsFavorite, Tags = project.Tags }
+            : project;
+
+        var openResult = await ideOpener.OpenAsync(target);
         if (!openResult.IsSuccess)
             return openResult;
 
@@ -40,5 +52,13 @@ public sealed class OpenProjectUseCase(
         }
 
         return Result.Success();
+    }
+
+    private static void OpenShell(string path)
+    {
+        if (OperatingSystem.IsWindows())
+            Process.Start(new ProcessStartInfo { FileName = "cmd.exe", Arguments = $"/k cd /d \"{path}\"", UseShellExecute = true });
+        else
+            Process.Start(new ProcessStartInfo { FileName = "/bin/sh", WorkingDirectory = path, UseShellExecute = true });
     }
 }

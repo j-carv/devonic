@@ -7,8 +7,6 @@ internal static class AddCommand
 {
     public static async Task<int> RunAsync(ServiceLocator services)
     {
-        var config = await services.ConfigRepository.GetAsync();
-
         var name = AnsiConsole.Ask<string>("  Project [green]name[/]:");
         var path = AnsiConsole.Ask<string>("  Project [green]path[/]:");
         var ide = AnsiConsole.Prompt(
@@ -17,9 +15,20 @@ internal static class AddCommand
                 .AddChoices(Enum.GetValues<Ide>())
                 .UseConverter(i => i.ToString()));
 
+        var alias = AnsiConsole.Prompt(
+            new TextPrompt<string>("  [green]Alias[/] [dim](short name, optional)[/]:")
+                .AllowEmpty());
+
         string? runCommand = null;
         if (AnsiConsole.Confirm("  Add a [green]run command[/]?", defaultValue: false))
             runCommand = AnsiConsole.Ask<string>("  Run command:");
+
+        var tagsInput = AnsiConsole.Prompt(
+            new TextPrompt<string>("  [green]Tags[/] [dim](comma-separated, optional)[/]:")
+                .AllowEmpty());
+        var tags = string.IsNullOrWhiteSpace(tagsInput)
+            ? new List<string>()
+            : tagsInput.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
 
         var isFavorite = AnsiConsole.Confirm("  Mark as [yellow]favorite[/]?", defaultValue: false);
 
@@ -28,15 +37,17 @@ internal static class AddCommand
             Name = name,
             Path = path,
             Ide = ide,
+            Alias = string.IsNullOrWhiteSpace(alias) ? null : alias,
             RunCommand = runCommand,
-            IsFavorite = isFavorite
+            IsFavorite = isFavorite,
+            Tags = tags
         };
 
         var result = await services.AddProject.ExecuteAsync(project);
 
         if (result.IsSuccess)
         {
-            AnsiConsole.MarkupLine($"[green]  -> Project '{Markup.Escape(name)}' added successfully.[/]");
+            AnsiConsole.MarkupLine($"[green]  -> Project '{Markup.Escape(name)}' added.[/]");
             return 0;
         }
 

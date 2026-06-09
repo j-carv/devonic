@@ -28,6 +28,14 @@ public sealed class JsonProjectRepository(string filePath) : IProjectRepository
             p.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
     }
 
+    public async Task<Project?> GetByNameOrAliasAsync(string nameOrAlias)
+    {
+        var projects = await GetAllAsync();
+        return projects.FirstOrDefault(p =>
+            p.Name.Equals(nameOrAlias, StringComparison.OrdinalIgnoreCase) ||
+            (p.Alias is not null && p.Alias.Equals(nameOrAlias, StringComparison.OrdinalIgnoreCase)));
+    }
+
     public async Task AddAsync(Project project)
     {
         var dtos = await ReadDtosAsync();
@@ -60,7 +68,18 @@ public sealed class JsonProjectRepository(string filePath) : IProjectRepository
     {
         var projects = await GetAllAsync();
         return projects
-            .Where(p => p.Name.Contains(query, StringComparison.OrdinalIgnoreCase))
+            .Where(p =>
+                p.Name.Contains(query, StringComparison.OrdinalIgnoreCase) ||
+                (p.Alias is not null && p.Alias.Contains(query, StringComparison.OrdinalIgnoreCase)) ||
+                p.Tags.Any(t => t.Contains(query, StringComparison.OrdinalIgnoreCase)))
+            .ToList();
+    }
+
+    public async Task<IReadOnlyList<Project>> GetByTagAsync(string tag)
+    {
+        var projects = await GetAllAsync();
+        return projects
+            .Where(p => p.Tags.Any(t => t.Equals(tag, StringComparison.OrdinalIgnoreCase)))
             .ToList();
     }
 
@@ -88,8 +107,10 @@ public sealed class JsonProjectRepository(string filePath) : IProjectRepository
         Name = dto.Name,
         Path = dto.Path,
         Ide = Enum.Parse<Ide>(dto.Ide, ignoreCase: true),
+        Alias = dto.Alias,
         RunCommand = dto.RunCommand,
-        IsFavorite = dto.IsFavorite
+        IsFavorite = dto.IsFavorite,
+        Tags = dto.Tags
     };
 
     private static ProjectDto MapToDto(Project project) => new()
@@ -97,7 +118,9 @@ public sealed class JsonProjectRepository(string filePath) : IProjectRepository
         Name = project.Name,
         Path = project.Path,
         Ide = project.Ide.ToString().ToLowerInvariant(),
+        Alias = project.Alias,
         RunCommand = project.RunCommand,
-        IsFavorite = project.IsFavorite
+        IsFavorite = project.IsFavorite,
+        Tags = project.Tags
     };
 }

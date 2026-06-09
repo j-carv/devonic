@@ -9,7 +9,7 @@
     <PackAsTool>true</PackAsTool>
     <ToolCommandName>dev</ToolCommandName>
     <PackageId>Devonic</PackageId>
-    <Version>0.1.2</Version>
+    <Version>0.2.0</Version>
     <Authors>devonic contributors</Authors>
     <Description>Open your projects fast from the terminal.</Description>
     <PackageProjectUrl>https://github.com/j-carv/devonic</PackageProjectUrl>

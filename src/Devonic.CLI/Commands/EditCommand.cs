@@ -29,7 +29,7 @@ internal static class EditCommand
             return 1;
         }
 
-        AnsiConsole.MarkupLine($"  Editing [green]{Markup.Escape(name)}[/] (press Enter to keep current value)\n");
+        AnsiConsole.MarkupLine($"  Editing [green]{Markup.Escape(name)}[/] [dim](Enter to keep current)[/]\n");
 
         var path = AnsiConsole.Prompt(
             new TextPrompt<string>($"  Path [dim]({Markup.Escape(existing.Path)})[/]:")
@@ -42,23 +42,37 @@ internal static class EditCommand
                 .AddChoices(Enum.GetValues<Ide>())
                 .UseConverter(i => i.ToString()));
 
+        var currentAlias = existing.Alias ?? "(none)";
+        var alias = AnsiConsole.Prompt(
+            new TextPrompt<string>($"  Alias [dim]({Markup.Escape(currentAlias)})[/]:")
+                .AllowEmpty());
+        if (string.IsNullOrWhiteSpace(alias)) alias = existing.Alias;
+
         var currentRun = existing.RunCommand ?? "(none)";
         var runCommand = AnsiConsole.Prompt(
             new TextPrompt<string>($"  Run command [dim]({Markup.Escape(currentRun)})[/]:")
                 .AllowEmpty());
         if (string.IsNullOrWhiteSpace(runCommand)) runCommand = existing.RunCommand;
 
-        var isFavorite = AnsiConsole.Confirm(
-            "  Favorite?",
-            defaultValue: existing.IsFavorite);
+        var currentTags = existing.Tags.Count > 0 ? string.Join(", ", existing.Tags) : "(none)";
+        var tagsInput = AnsiConsole.Prompt(
+            new TextPrompt<string>($"  Tags [dim]({Markup.Escape(currentTags)})[/]:")
+                .AllowEmpty());
+        var tags = string.IsNullOrWhiteSpace(tagsInput)
+            ? existing.Tags
+            : tagsInput.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
+
+        var isFavorite = AnsiConsole.Confirm("  Favorite?", defaultValue: existing.IsFavorite);
 
         var updated = new Project
         {
             Name = name,
             Path = path,
             Ide = ide,
+            Alias = alias,
             RunCommand = runCommand,
-            IsFavorite = isFavorite
+            IsFavorite = isFavorite,
+            Tags = tags
         };
 
         var result = await services.EditProject.ExecuteAsync(updated);
